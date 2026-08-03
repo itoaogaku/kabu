@@ -33,6 +33,9 @@ var HEADERS = [
 // ------------------------------------------------------------------
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.action) {
+    return handleApi_(e);
+  }
   var tmpl = HtmlService.createTemplateFromFile('Index');
   return tmpl
     .evaluate()
@@ -40,8 +43,77 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+function doPost(e) {
+  return handleApi_(e);
+}
+
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// ------------------------------------------------------------------
+// JSON API (外部フロントエンド用。例: Vercel でホストする静的サイトから fetch で呼ぶ)
+// ------------------------------------------------------------------
+
+// スクリプトプロパティに API_TOKEN を設定すると、一致する ?token=... が
+// 無いリクエストを拒否するようになる(未設定の場合は誰でも呼び出せてしまうので
+// 外部公開する場合は必ず設定すること)。
+function checkToken_(e) {
+  var required = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
+  if (!required) return true;
+  return e.parameter && e.parameter.token === required;
+}
+
+function handleApi_(e) {
+  var result;
+  try {
+    if (!checkToken_(e)) {
+      throw new Error('unauthorized');
+    }
+    var p = e.parameter || {};
+    switch (p.action) {
+      case 'list':
+        result = getStocks();
+        break;
+      case 'add':
+        result = addStock({
+          ticker: p.ticker,
+          name: p.name,
+          quantity: p.quantity,
+          buy_price: p.buy_price,
+          buy_date: p.buy_date,
+          memo: p.memo
+        });
+        break;
+      case 'sell':
+        result = sellStock(p.id, p.sell_price, p.sell_date);
+        break;
+      case 'unsell':
+        result = unsellStock(p.id);
+        break;
+      case 'memo':
+        result = updateMemo(p.id, p.memo);
+        break;
+      case 'delete':
+        result = deleteStock(p.id);
+        break;
+      case 'history':
+        result = getHistory(p.id);
+        break;
+      case 'refresh':
+        result = refreshPrices();
+        break;
+      default:
+        throw new Error('unknown action: ' + p.action);
+    }
+    return jsonOutput_({ ok: true, data: result });
+  } catch (err) {
+    return jsonOutput_({ ok: false, error: String(err && err.message ? err.message : err) });
+  }
+}
+
+function jsonOutput_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ------------------------------------------------------------------

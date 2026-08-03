@@ -44,6 +44,43 @@ Google アカウントでの操作が必要なため、これはユーザー自�
 「デプロイ」→「デプロイを管理」→ 該当デプロイの編集(鉛筆アイコン)→
 「新しいバージョン」を選んで再デプロイすると、同じ URL のまま更新が反映される。
 
+## 外部フロントエンド(Vercelなど)から呼び出す場合の JSON API
+
+[`../web/`](../web/) の Vercel 版フロントエンドのように、このスプレッドシート付属の
+画面を使わず外部の静的サイトから操作したい場合、`Code.gs` は `?action=...` 付きの
+GET リクエストで JSON API としても動作する。
+
+```
+GET {デプロイURL}?action=list&token=...
+GET {デプロイURL}?action=add&token=...&ticker=7203&buy_price=3000&buy_date=2026-07-01&quantity=100&name=...&memo=...
+GET {デプロイURL}?action=sell&token=...&id=...&sell_price=3200&sell_date=2026-08-01
+GET {デプロイURL}?action=unsell&token=...&id=...
+GET {デプロイURL}?action=memo&token=...&id=...&memo=...
+GET {デプロイURL}?action=delete&token=...&id=...
+GET {デプロイURL}?action=history&token=...&id=...
+GET {デプロイURL}?action=refresh&token=...
+```
+
+レスポンスは `{"ok": true, "data": ...}` または `{"ok": false, "error": "..."}` の JSON。
+
+この API を外部サイトから呼ぶには、以下の追加設定が必要になる。
+
+1. **トークンを設定する**(必須。個人の保有株情報を守るため)
+   プロジェクトの設定(⚙️)→「スクリプト プロパティ」→「スクリプト プロパティを追加」
+   → プロパティ名 `API_TOKEN`、値に自分で決めたランダムな文字列(例: パスワード生成ツールで
+   作った32文字程度の文字列)を入力して保存する。この値を後で Vercel 側の環境変数
+   `GAS_API_TOKEN` に設定する。
+2. **デプロイのアクセス権を「全員」に変更する**
+   「デプロイ」→「デプロイを管理」→ 編集(鉛筆アイコン)→「アクセスできるユーザー」を
+   「全員」に変更して再デプロイ(新しいバージョンとして)する。
+   「自分のみ」のままだと、外部サイトからのアクセスは Google のログイン画面にリダイレクト
+   されてしまい JSON が返らない。
+   トークンチェックがあるので、URLとトークンを知らない第三者はデータを読み書きできない。
+3. **Web アプリ URL(`/exec` で終わるもの)を控えておく**
+   「デプロイを管理」の画面に表示される URL。テスト用の `/dev` URL ではなく、正式デプロイの
+   `/exec` URL を使うこと。ブラウザで
+   `{URL}?action=list&token={設定したトークン}` を直接開いて JSON が返れば設定完了。
+
 ## デプロイ手順(clasp を使う場合・任意)
 
 コマンドラインでコードを push したい場合は [clasp](https://github.com/google/clasp) が使える。
