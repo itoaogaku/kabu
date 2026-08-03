@@ -1,12 +1,15 @@
 /**
  * かぶトラッカー (GAS版)
  * データはこのスクリプトが紐付いた Google スプレッドシートに保存する。
- * 株価は GOOGLEFINANCE 関数経由で取得する(API キー不要)。
+ * 株価は Yahoo Finance の公開チャートAPI(UrlFetchApp経由)から取得する。
+ * (GOOGLEFINANCE は東証銘柄で #N/A になる、または裸のティッカーが別銘柄に誤解決される
+ *  ことを確認したため使用をやめた。)
  */
 
 var STOCKS_SHEET = 'Stocks';
-var SCRATCH_SHEET = '_scratch';
 var TZ = 'Asia/Tokyo';
+var YF_CHART_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+var PRICE_CACHE_TTL = 300; // 秒(refreshPrices はこのキャッシュを無視して強制取得する)
 
 var COL = {
   ID: 1,
@@ -122,7 +125,6 @@ function jsonOutput_(obj) {
 
 function setup() {
   getStocksSheet_();
-  ensureScratchSheet_();
   return 'セットアップ完了';
 }
 
@@ -139,89 +141,140 @@ function getStocksSheet_() {
   return sheet;
 }
 
-function ensureScratchSheet_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SCRATCH_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(SCRATCH_SHEET);
-    sheet.hideSheet();
-  }
-  return sheet;
-}
-
 // ------------------------------------------------------------------
-// ティッカー正規化・GOOGLEFINANCE ヘルパー
+// ティッカー正規化・Yahoo Finance ヘルパー
 // ------------------------------------------------------------------
 
-// GOOGLEFINANCE は東証銘柄について "TYO:" 等の取引所プレフィックスを付けると
-// #N/A になり、プレフィックス無しの裸のコードでないと解決できないことを確認済み。
-// 例: "7203" -> "7203", "AAPL" -> "AAPL", "NASDAQ:AAPL" -> そのまま(既に明示的な場合のみ維持)
+// 東証の3〜4桁(+英数字1桁)コードには ".T" を付与する(Yahoo Finance の形式)。
+// 例: "7203" -> "7203.T", "166A" -> "166A.T", "AAPL" -> "AAPL"、
+// 既に "." や ":" を含む場合(例: "7203.T", "NASDAQ:AAPL")はそのまま使う。
+var JP_CODE_RE = /^\d{3,4}[A-Z0-9]?$/;
+
 function normalizeTicker(raw) {
-  return String(raw).trim().toUpperCase();
+  var t = String(raw).trim().toUpperCase();
+  if (t.indexOf('.') !== -1 || t.indexOf(':') !== -1) return t;
+  if (JP_CODE_RE.test(t)) return t + '.T';
+  return t;
 }
 
-function withLock_(fn) {
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    return fn();
-  } finally {
-    lock.releaseLock();
-  }
+function yahooFetchOptions_() {
+  return {
+    muteHttpExceptions: true,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+  };
 }
 
-function fetchName_(gfTicker) {
-  return withLock_(function () {
-    var sheet = ensureScratchSheet_();
-    var cell = sheet.getRange('A1');
-    var safe = gfTicker.replace(/"/g, '');
-    cell.setFormula('=IFERROR(GOOGLEFINANCE("' + safe + '","name"),"")');
-    SpreadsheetApp.flush();
-    var value = cell.getValue();
-    cell.clearContent();
-    return value || '';
+// 現在値(と可能であれば銘柄名)をまとめて取得する。1分程度はキャッシュを使う。
+// 戻り値: { [ticker]: {price, currency, name} | null }
+function fetchCurrentPrices_(tickers, bypassCache) {
+  var unique = [];
+  var seen = {};
+  tickers.forEach(function (t) {
+    if (t && !seen[t]) { seen[t] = true; unique.push(t); }
   });
+  var result = {};
+  if (!unique.length) return result;
+
+  var cache = CacheService.getScriptCache();
+  var toFetch = [];
+  if (bypassCache) {
+    toFetch = unique;
+  } else {
+    unique.forEach(function (t) {
+      var cached = cache.get('price_' + t);
+      if (cached) {
+        result[t] = JSON.parse(cached);
+      } else {
+        toFetch.push(t);
+      }
+    });
+  }
+  if (!toFetch.length) return result;
+
+  var requests = toFetch.map(function (t) {
+    return Object.assign(
+      { url: YF_CHART_BASE + encodeURIComponent(t) + '?interval=1d&range=1d' },
+      yahooFetchOptions_()
+    );
+  });
+
+  var responses;
+  try {
+    responses = UrlFetchApp.fetchAll(requests);
+  } catch (e) {
+    toFetch.forEach(function (t) { result[t] = null; });
+    return result;
+  }
+
+  for (var i = 0; i < toFetch.length; i++) {
+    var t = toFetch[i];
+    var data = null;
+    try {
+      var res = responses[i];
+      if (res.getResponseCode() === 200) {
+        var json = JSON.parse(res.getContentText());
+        var chartResult = json.chart && json.chart.result && json.chart.result[0];
+        var meta = chartResult && chartResult.meta;
+        if (meta && typeof meta.regularMarketPrice === 'number') {
+          data = {
+            price: meta.regularMarketPrice,
+            currency: meta.currency || '',
+            name: meta.longName || meta.shortName || ''
+          };
+        }
+      }
+    } catch (e) {
+      data = null;
+    }
+    result[t] = data;
+    cache.put('price_' + t, JSON.stringify(data), PRICE_CACHE_TTL);
+  }
+  return result;
 }
 
-function fetchHistory_(gfTicker, startDate, endDate) {
-  return withLock_(function () {
-    var sheet = ensureScratchSheet_();
-    var scratchRange = sheet.getRange('A1:B3000');
-    scratchRange.clearContent();
-    var safe = gfTicker.replace(/"/g, '');
-    var formula = '=IFERROR(GOOGLEFINANCE("' + safe + '","close",DATE(' +
-      startDate.getFullYear() + ',' + (startDate.getMonth() + 1) + ',' + startDate.getDate() + '),DATE(' +
-      endDate.getFullYear() + ',' + (endDate.getMonth() + 1) + ',' + endDate.getDate() + '),"DAILY"),"")';
-    sheet.getRange('A1').setFormula(formula);
-    SpreadsheetApp.flush();
-    var values = scratchRange.getValues();
-    scratchRange.clearContent();
+function fetchName_(yfTicker) {
+  var data = fetchCurrentPrices_([yfTicker])[yfTicker];
+  return (data && data.name) || '';
+}
+
+function fetchHistory_(yfTicker, startDate, endDate) {
+  var period1 = Math.floor(startDate.getTime() / 1000);
+  var endPlusOne = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+  var period2 = Math.floor(endPlusOne.getTime() / 1000);
+  var url = YF_CHART_BASE + encodeURIComponent(yfTicker) +
+    '?period1=' + period1 + '&period2=' + period2 + '&interval=1d';
+  try {
+    var res = UrlFetchApp.fetch(url, yahooFetchOptions_());
+    if (res.getResponseCode() !== 200) return [];
+    var json = JSON.parse(res.getContentText());
+    var chartResult = json.chart && json.chart.result && json.chart.result[0];
+    if (!chartResult) return [];
+    var timestamps = chartResult.timestamp || [];
+    var closes = (chartResult.indicators && chartResult.indicators.quote &&
+      chartResult.indicators.quote[0] && chartResult.indicators.quote[0].close) || [];
     var rows = [];
-    for (var i = 1; i < values.length; i++) {
-      var d = values[i][0];
-      var c = values[i][1];
-      if (d === '' || d === null || d === undefined) continue;
-      var dateStr = (Object.prototype.toString.call(d) === '[object Date]')
-        ? Utilities.formatDate(d, TZ, 'yyyy-MM-dd')
-        : String(d);
-      rows.push({ date: dateStr, close: Number(c) });
+    for (var i = 0; i < timestamps.length; i++) {
+      if (closes[i] === null || closes[i] === undefined) continue;
+      var d = new Date(timestamps[i] * 1000);
+      rows.push({ date: Utilities.formatDate(d, TZ, 'yyyy-MM-dd'), close: Math.round(closes[i] * 100) / 100 });
     }
     return rows;
-  });
+  } catch (e) {
+    return [];
+  }
 }
 
 function refreshPrices() {
   var sheet = getStocksSheet_();
   var lastRow = sheet.getLastRow();
   if (lastRow >= 2) {
+    var tickers = sheet.getRange(2, COL.GF_TICKER, lastRow - 1, 1).getValues()
+      .map(function (r) { return String(r[0]); });
+    var prices = fetchCurrentPrices_(tickers, true);
     for (var r = 2; r <= lastRow; r++) {
-      var gfTicker = sheet.getRange(r, COL.GF_TICKER).getValue();
-      if (gfTicker) {
-        // 同一の数式を再設定することで GOOGLEFINANCE の再取得を促す
-        sheet.getRange(r, COL.CURRENT_PRICE).setFormula(
-          '=IFERROR(GOOGLEFINANCE("' + String(gfTicker).replace(/"/g, '') + '"),"")'
-        );
-      }
+      var t = String(sheet.getRange(r, COL.GF_TICKER).getValue());
+      var data = prices[t];
+      sheet.getRange(r, COL.CURRENT_PRICE).setValue(data && typeof data.price === 'number' ? data.price : '');
     }
     SpreadsheetApp.flush();
   }
@@ -321,10 +374,11 @@ function addStock(data) {
   if (!data || !data.ticker || !data.buy_price || !data.buy_date) {
     throw new Error('証券コード・購入価格・購入日は必須です');
   }
-  var gfTicker = normalizeTicker(data.ticker);
+  var yfTicker = normalizeTicker(data.ticker);
+  var priceData = fetchCurrentPrices_([yfTicker])[yfTicker];
   var name = (data.name || '').trim();
   if (!name) {
-    name = fetchName_(gfTicker) || data.ticker;
+    name = (priceData && priceData.name) || data.ticker;
   }
   var sheet = getStocksSheet_();
   var id = Utilities.getUuid();
@@ -335,11 +389,11 @@ function addStock(data) {
   var rowIndex = sheet.getLastRow() + 1;
 
   sheet.getRange(rowIndex, COL.ID, 1, 11).setValues([[
-    id, data.ticker, gfTicker, name, quantity, buyPrice, buyDate, '', '', data.memo || '', now
+    id, data.ticker, yfTicker, name, quantity, buyPrice, buyDate, '', '', data.memo || '', now
   ]]);
   sheet.getRange(rowIndex, COL.BUY_DATE).setNumberFormat('yyyy-mm-dd');
-  sheet.getRange(rowIndex, COL.CURRENT_PRICE).setFormula(
-    '=IFERROR(GOOGLEFINANCE("' + gfTicker.replace(/"/g, '') + '"),"")'
+  sheet.getRange(rowIndex, COL.CURRENT_PRICE).setValue(
+    priceData && typeof priceData.price === 'number' ? priceData.price : ''
   );
   SpreadsheetApp.flush();
   return getStocks();
@@ -355,12 +409,12 @@ function importLots(lots) {
   var now = new Date();
   var startRow = sheet.getLastRow() + 1;
   var rows = lots.map(function (lot) {
-    var gfTicker = normalizeTicker(lot.ticker);
+    var yfTicker = normalizeTicker(lot.ticker);
     var hasSell = lot.sell_price !== null && lot.sell_price !== undefined && lot.sell_price !== '';
     return [
       Utilities.getUuid(),
       lot.ticker,
-      gfTicker,
+      yfTicker,
       lot.name || lot.ticker,
       Number(lot.quantity) || 1,
       Number(lot.buy_price),
@@ -373,42 +427,43 @@ function importLots(lots) {
   });
 
   sheet.getRange(startRow, 1, rows.length, 11).setValues(rows);
+
+  var tickers = rows.map(function (r) { return r[COL.GF_TICKER - 1]; });
+  var prices = fetchCurrentPrices_(tickers, true);
+
   for (var i = 0; i < rows.length; i++) {
     var r = startRow + i;
     sheet.getRange(r, COL.BUY_DATE).setNumberFormat('yyyy-mm-dd');
     if (rows[i][COL.SELL_DATE - 1]) {
       sheet.getRange(r, COL.SELL_DATE).setNumberFormat('yyyy-mm-dd');
     }
-    sheet.getRange(r, COL.CURRENT_PRICE).setFormula(
-      '=IFERROR(GOOGLEFINANCE("' + String(rows[i][COL.GF_TICKER - 1]).replace(/"/g, '') + '"),"")'
-    );
+    var data = prices[rows[i][COL.GF_TICKER - 1]];
+    sheet.getRange(r, COL.CURRENT_PRICE).setValue(data && typeof data.price === 'number' ? data.price : '');
   }
   SpreadsheetApp.flush();
   return getStocks();
 }
 
-// 過去に "TYO:" プレフィックス付きで登録してしまった行を修復する(1回限りの
-// メンテナンス用。Apps Script エディタから直接実行する)。
-// normalizeTicker() の仕様変更(TYO: を付けないよう修正)に合わせて、
-// 既存行の gf_ticker 列と現在値の数式を裸のコードに直す。
-function fixTickerFormat() {
+// normalizeTicker() のロジックが変わった際に、既存行の gf_ticker 列(B列の元の
+// ティッカーから再計算)を最新の形式に一括で直すためのメンテナンス関数。
+// Apps Script エディタから直接実行する想定。実行後は refreshPrices() を
+// 呼ぶ(またはダッシュボードの更新ボタンを押す)と現在値が入り直る。
+function resyncTickers() {
   var sheet = getStocksSheet_();
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return 0;
   var count = 0;
   for (var r = 2; r <= lastRow; r++) {
-    var gfTicker = String(sheet.getRange(r, COL.GF_TICKER).getValue());
-    if (gfTicker.indexOf('TYO:') === 0) {
-      var fixed = gfTicker.slice(4);
-      sheet.getRange(r, COL.GF_TICKER).setValue(fixed);
-      sheet.getRange(r, COL.CURRENT_PRICE).setFormula(
-        '=IFERROR(GOOGLEFINANCE("' + fixed.replace(/"/g, '') + '"),"")'
-      );
+    var raw = String(sheet.getRange(r, COL.TICKER).getValue());
+    var newYfTicker = normalizeTicker(raw);
+    var oldYfTicker = String(sheet.getRange(r, COL.GF_TICKER).getValue());
+    if (oldYfTicker !== newYfTicker) {
+      sheet.getRange(r, COL.GF_TICKER).setValue(newYfTicker);
       count++;
     }
   }
   SpreadsheetApp.flush();
-  Logger.log('修正件数: ' + count);
+  Logger.log('ティッカー再同期件数: ' + count);
   return count;
 }
 
