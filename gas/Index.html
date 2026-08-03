@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?!= include('Stylesheet'); ?>
+</head>
+<body>
+<header class="topbar">
+  <h1>📈 かぶトラッカー</h1>
+  <div class="topbar-actions">
+    <span id="last-updated" class="muted"></span>
+    <button id="refresh-btn" class="btn">🔄 最新の株価に更新</button>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>銘柄を追加</h2>
+    <form id="add-form" class="add-form">
+      <div class="field">
+        <label>証券コード / ティッカー</label>
+        <input type="text" name="ticker" placeholder="例: 7203 または AAPL" required>
+      </div>
+      <div class="field">
+        <label>銘柄名(任意)</label>
+        <input type="text" name="name" placeholder="自動取得も可">
+      </div>
+      <div class="field">
+        <label>株数</label>
+        <input type="number" name="quantity" value="100" min="0" step="1">
+      </div>
+      <div class="field">
+        <label>購入価格</label>
+        <input type="number" name="buy_price" step="0.01" required>
+      </div>
+      <div class="field">
+        <label>購入日</label>
+        <input type="date" name="buy_date" required>
+      </div>
+      <div class="field wide">
+        <label>メモ</label>
+        <input type="text" name="memo" placeholder="購入理由など">
+      </div>
+      <button type="submit" class="btn primary">追加</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>保有中 (<span id="holding-count">0</span>)</h2>
+    <p id="holding-empty" class="muted hidden">保有中の銘柄はまだありません。</p>
+    <div class="table-wrap">
+    <table class="stock-table" id="holding-table">
+      <thead>
+        <tr>
+          <th>銘柄</th>
+          <th>購入価格</th>
+          <th>購入日</th>
+          <th>現在値</th>
+          <th>購入時からの騰落</th>
+          <th>メモ</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="holding-body"></tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>売却済み (<span id="sold-count">0</span>)</h2>
+    <p id="sold-empty" class="muted hidden">売却済みの銘柄はまだありません。</p>
+    <div class="table-wrap">
+    <table class="stock-table" id="sold-table">
+      <thead>
+        <tr>
+          <th>銘柄</th>
+          <th>購入価格 / 日</th>
+          <th>売却価格 / 日</th>
+          <th>実現損益</th>
+          <th>現在値</th>
+          <th>売却後の騰落(見送り確認)</th>
+          <th>メモ</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="sold-body"></tbody>
+    </table>
+    </div>
+  </section>
+</main>
+
+<div id="chart-modal" class="modal hidden">
+  <div class="modal-content">
+    <button id="modal-close" class="btn small">✕ 閉じる</button>
+    <h3 id="modal-title"></h3>
+    <canvas id="price-chart" height="120"></canvas>
+  </div>
+</div>
+
+<div id="loading-overlay" class="loading hidden">読み込み中...</div>
+
+<?!= include('ChartJs'); ?>
+<?!= include('JavaScript'); ?>
+</body>
+</html>
