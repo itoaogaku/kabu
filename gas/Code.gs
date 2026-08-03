@@ -346,6 +346,48 @@ function addStock(data) {
   return getStocks();
 }
 
+// 証券会社の取引履歴CSVなどから作った複数件をまとめて登録する。
+// lots: [{ ticker, name, quantity, buy_price, buy_date, sell_price, sell_date, memo }, ...]
+// sell_price/sell_date は未売却なら null または省略でよい。
+// Apps Script エディタで直接実行する想定(1回限りの取り込み用)。
+function importLots(lots) {
+  if (!lots || !lots.length) return getStocks();
+  var sheet = getStocksSheet_();
+  var now = new Date();
+  var startRow = sheet.getLastRow() + 1;
+  var rows = lots.map(function (lot) {
+    var gfTicker = normalizeTicker(lot.ticker);
+    var hasSell = lot.sell_price !== null && lot.sell_price !== undefined && lot.sell_price !== '';
+    return [
+      Utilities.getUuid(),
+      lot.ticker,
+      gfTicker,
+      lot.name || lot.ticker,
+      Number(lot.quantity) || 1,
+      Number(lot.buy_price),
+      parseDate_(lot.buy_date),
+      hasSell ? Number(lot.sell_price) : '',
+      hasSell && lot.sell_date ? parseDate_(lot.sell_date) : '',
+      lot.memo || '',
+      now
+    ];
+  });
+
+  sheet.getRange(startRow, 1, rows.length, 11).setValues(rows);
+  for (var i = 0; i < rows.length; i++) {
+    var r = startRow + i;
+    sheet.getRange(r, COL.BUY_DATE).setNumberFormat('yyyy-mm-dd');
+    if (rows[i][COL.SELL_DATE - 1]) {
+      sheet.getRange(r, COL.SELL_DATE).setNumberFormat('yyyy-mm-dd');
+    }
+    sheet.getRange(r, COL.CURRENT_PRICE).setFormula(
+      '=IFERROR(GOOGLEFINANCE("' + String(rows[i][COL.GF_TICKER - 1]).replace(/"/g, '') + '"),"")'
+    );
+  }
+  SpreadsheetApp.flush();
+  return getStocks();
+}
+
 function sellStock(id, sellPrice, sellDate) {
   var sheet = getStocksSheet_();
   var row = findRow_(sheet, id);
