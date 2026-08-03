@@ -1,14 +1,16 @@
 <style>
 :root {
-  --bg: #f5f6f8;
+  --bg: #f2f3f5;
   --card-bg: #ffffff;
   --text: #1c1e21;
   --muted: #767b85;
-  --border: #e4e6eb;
-  --primary: #2563eb;
-  --up: #d92b2b;   /* 日本の相場慣習: 上昇=赤 */
-  --down: #1a63c9; /* 下落=青 */
+  --border: #e2e5ea;
+  --header-bg: #f7f8fa;
+  --primary: #1a56c4;
+  --up: #d92b2b;    /* 日本の証券会社の慣習: 上昇/プラス=赤 */
+  --down: #1a7f37;  /* 下落/マイナス=緑 */
   --danger: #b91c1c;
+  --accent: #eef3fc;
 }
 
 * { box-sizing: border-box; }
@@ -18,6 +20,7 @@ body {
   font-family: "Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text);
+  font-size: 14px;
 }
 
 .hidden { display: none !important; }
@@ -26,34 +29,83 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px 20px;
   background: var(--card-bg);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 5;
 }
-.topbar h1 { font-size: 1.2rem; margin: 0; }
+.topbar h1 { font-size: 1.1rem; margin: 0; }
 .topbar-actions { display: flex; align-items: center; gap: 12px; }
 
 main {
-  max-width: 1100px;
-  margin: 24px auto;
+  max-width: 1180px;
+  margin: 20px auto;
   padding: 0 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: 6px;
+  padding: 18px;
 }
-.card h2 { margin-top: 0; font-size: 1.05rem; }
+.card h2 { margin-top: 0; font-size: 1rem; }
 
 .muted { color: var(--muted); font-size: 0.9rem; }
+
+/* --- サマリーカード(資産合計スタイル) --- */
+.summary-card { padding: 0; overflow: hidden; }
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.summary-col {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.summary-col + .summary-col { border-left: 1px solid var(--border); }
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+}
+.summary-row .label { color: var(--muted); font-size: 0.85rem; }
+.summary-row .value { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.summary-row .value.small { font-size: 0.95rem; font-weight: 600; }
+.summary-row .value.up { color: var(--up); }
+.summary-row .value.down { color: var(--down); }
+
+/* --- タブ --- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+}
+.tab-btn {
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.tab-panel { padding: 16px 18px; }
+.tab-panel.hidden { display: none; }
 
 .add-form {
   display: flex;
@@ -66,13 +118,13 @@ main {
 .field input {
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 0.9rem;
 }
 
 .btn {
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 7px 14px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: #fff;
   cursor: pointer;
@@ -85,37 +137,61 @@ main {
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .table-wrap { overflow-x: auto; }
-.stock-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.stock-table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.stock-table thead th {
+  background: var(--header-bg);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
 .stock-table th, .stock-table td {
-  padding: 10px 6px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
+  text-align: right;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.stock-table th.col-name, .stock-table td.col-name { text-align: left; }
+.stock-table th.col-actions, .stock-table td.col-actions { text-align: left; }
+.stock-table tbody tr:hover { background: var(--accent); }
+.stock-table td.actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+
+.name-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.account-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--primary);
+  border: 1px solid #c9dafc;
   white-space: nowrap;
 }
-.stock-table td.actions { display: flex; flex-direction: column; gap: 6px; }
-
 .ticker-sub { color: var(--muted); font-size: 0.75rem; }
 
-.chg.up { color: var(--up); font-weight: 600; }
-.chg.down { color: var(--down); font-weight: 600; }
-.hint { font-size: 0.72rem; color: var(--muted); white-space: normal; }
+.chg.up { color: var(--up); font-weight: 700; }
+.chg.down { color: var(--down); font-weight: 700; }
+.hint { font-size: 0.72rem; color: var(--muted); white-space: normal; text-align: right; }
 
 .link-btn {
   background: none;
   border: none;
   color: var(--primary);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   padding: 0;
-  text-decoration: underline;
+  text-decoration: none;
+  font-weight: 600;
+  text-align: left;
 }
+.link-btn:hover { text-decoration: underline; }
 
 .memo-form { display: flex; gap: 6px; }
-.memo-form input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; width: 110px; }
+.memo-form input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; width: 110px; }
 
 .sell-form { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-.sell-form input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.sell-form input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; }
 
 .modal {
   position: fixed; inset: 0;
@@ -126,7 +202,7 @@ main {
 .modal.hidden { display: none; }
 .modal-content {
   background: #fff;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 20px;
   width: min(700px, 92vw);
 }
@@ -137,5 +213,10 @@ main {
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem;
   z-index: 30;
+}
+
+@media (max-width: 640px) {
+  .summary-grid { grid-template-columns: 1fr; }
+  .summary-col + .summary-col { border-left: none; border-top: 1px solid var(--border); }
 }
 </style>

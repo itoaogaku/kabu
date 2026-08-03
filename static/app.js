@@ -19,6 +19,16 @@ document.getElementById("refresh-btn").addEventListener("click", refreshPrices);
 setLastUpdated();
 setInterval(refreshPrices, AUTO_REFRESH_MS);
 
+// --- タブ切り替え ---
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.remove("hidden");
+  });
+});
+
 // --- チャートモーダル ---
 const modal = document.getElementById("chart-modal");
 const modalTitle = document.getElementById("modal-title");
@@ -52,8 +62,8 @@ document.querySelectorAll(".chart-btn").forEach((btn) => {
           {
             label: "終値",
             data: closes,
-            borderColor: "#2563eb",
-            backgroundColor: "rgba(37,99,235,0.1)",
+            borderColor: "#1a56c4",
+            backgroundColor: "rgba(26,86,196,0.1)",
             tension: 0.2,
             pointRadius: 0,
           },

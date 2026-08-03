@@ -10,6 +10,21 @@ app = Flask(__name__)
 db.init_db()
 
 
+@app.template_filter("yen")
+def yen_filter(value):
+    if value is None:
+        return "―"
+    return f"¥{value:,.0f}"
+
+
+@app.template_filter("yen_signed")
+def yen_signed_filter(value):
+    if value is None:
+        return "―"
+    sign = "+" if value > 0 else ("-" if value < 0 else "")
+    return f"{sign}¥{abs(value):,.0f}"
+
+
 def _pct(base: float, current: float) -> float | None:
     if not base:
         return None
@@ -48,12 +63,40 @@ def _enrich(stock: dict) -> dict:
     return stock
 
 
+def _summary(holding: list[dict], sold: list[dict]) -> dict:
+    cost_total = sum(s["buy_price"] * s["quantity"] for s in holding)
+    known = [s for s in holding if s["current_price"] is not None]
+    market_known = len(known) > 0
+    market_total = sum(s["current_price"] * s["quantity"] for s in known)
+    unrealized = (market_total - cost_total) if market_known else None
+    unrealized_pct = (
+        round(unrealized / cost_total * 100, 2) if (market_known and cost_total) else None
+    )
+    realized_total = sum((s["sell_price"] - s["buy_price"]) * s["quantity"] for s in sold)
+    return {
+        "cost_total": cost_total,
+        "market_total": market_total,
+        "market_known": market_known,
+        "unrealized": unrealized,
+        "unrealized_pct": unrealized_pct,
+        "realized_total": realized_total,
+    }
+
+
 @app.route("/")
 def index():
     stocks = [_enrich(s) for s in db.list_stocks()]
     holding = [s for s in stocks if not s["is_sold"]]
     sold = [s for s in stocks if s["is_sold"]]
-    return render_template("index.html", holding=holding, sold=sold, today=date.today().isoformat())
+    for s in holding:
+        s["market_value"] = s["current_price"] * s["quantity"] if s["current_price"] is not None else None
+        s["pnl_value"] = s["market_value"] - s["buy_price"] * s["quantity"] if s["market_value"] is not None else None
+    for s in sold:
+        s["realized_value"] = (s["sell_price"] - s["buy_price"]) * s["quantity"]
+    summary = _summary(holding, sold)
+    return render_template(
+        "index.html", holding=holding, sold=sold, summary=summary, today=date.today().isoformat()
+    )
 
 
 @app.route("/add", methods=["POST"])

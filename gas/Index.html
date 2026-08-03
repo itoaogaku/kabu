@@ -16,6 +16,31 @@
 </header>
 
 <main>
+  <section class="card summary-card">
+    <div class="summary-grid">
+      <div class="summary-col">
+        <div class="summary-row">
+          <span class="label">評価額合計(保有中)</span>
+          <span class="value" id="sum-market-value">¥0</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">取得金額合計</span>
+          <span class="value small" id="sum-cost-value">¥0</span>
+        </div>
+      </div>
+      <div class="summary-col">
+        <div class="summary-row">
+          <span class="label">評価損益合計</span>
+          <span class="value" id="sum-unrealized">±¥0 (±0.00%)</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">実現損益合計(売却済み)</span>
+          <span class="value small" id="sum-realized">±¥0</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="card">
     <h2>銘柄を追加</h2>
     <form id="add-form" class="add-form">
@@ -47,46 +72,54 @@
     </form>
   </section>
 
-  <section class="card">
-    <h2>保有中 (<span id="holding-count">0</span>)</h2>
-    <p id="holding-empty" class="muted hidden">保有中の銘柄はまだありません。</p>
-    <div class="table-wrap">
-    <table class="stock-table" id="holding-table">
-      <thead>
-        <tr>
-          <th>銘柄</th>
-          <th>購入価格</th>
-          <th>購入日</th>
-          <th>現在値</th>
-          <th>購入時からの騰落</th>
-          <th>メモ</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody id="holding-body"></tbody>
-    </table>
+  <section class="card" style="padding:0;">
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="holding">保有中 (<span id="holding-count">0</span>)</button>
+      <button type="button" class="tab-btn" data-tab="sold">売却済み (<span id="sold-count">0</span>)</button>
     </div>
-  </section>
 
-  <section class="card">
-    <h2>売却済み (<span id="sold-count">0</span>)</h2>
-    <p id="sold-empty" class="muted hidden">売却済みの銘柄はまだありません。</p>
-    <div class="table-wrap">
-    <table class="stock-table" id="sold-table">
-      <thead>
-        <tr>
-          <th>銘柄</th>
-          <th>購入価格 / 日</th>
-          <th>売却価格 / 日</th>
-          <th>実現損益</th>
-          <th>現在値</th>
-          <th>売却後の騰落(見送り確認)</th>
-          <th>メモ</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody id="sold-body"></tbody>
-    </table>
+    <div class="tab-panel" id="panel-holding">
+      <p id="holding-empty" class="muted hidden">保有中の銘柄はまだありません。</p>
+      <div class="table-wrap">
+      <table class="stock-table" id="holding-table">
+        <thead>
+          <tr>
+            <th class="col-name">銘柄</th>
+            <th>保有数量</th>
+            <th>取得単価</th>
+            <th>購入日</th>
+            <th>現在値</th>
+            <th>評価額</th>
+            <th>評価損益</th>
+            <th class="col-name">メモ</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody id="holding-body"></tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="tab-panel hidden" id="panel-sold">
+      <p id="sold-empty" class="muted hidden">売却済みの銘柄はまだありません。</p>
+      <div class="table-wrap">
+      <table class="stock-table" id="sold-table">
+        <thead>
+          <tr>
+            <th class="col-name">銘柄</th>
+            <th>保有数量</th>
+            <th>取得単価 / 日</th>
+            <th>売却単価 / 日</th>
+            <th>実現損益</th>
+            <th>現在値</th>
+            <th>売却後の騰落(見送り確認)</th>
+            <th class="col-name">メモ</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody id="sold-body"></tbody>
+      </table>
+      </div>
     </div>
   </section>
 </main>
