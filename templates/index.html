@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>かぶトラッカー</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+</head>
+<body>
+<header class="topbar">
+  <h1>📈 かぶトラッカー</h1>
+  <div class="topbar-actions">
+    <span id="last-updated" class="muted"></span>
+    <button id="refresh-btn" class="btn">🔄 最新の株価に更新</button>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>銘柄を追加</h2>
+    <form action="{{ url_for('add') }}" method="post" class="add-form">
+      <div class="field">
+        <label>証券コード / ティッカー</label>
+        <input type="text" name="ticker" placeholder="例: 7203 または AAPL" required>
+      </div>
+      <div class="field">
+        <label>銘柄名(任意)</label>
+        <input type="text" name="name" placeholder="自動取得も可">
+      </div>
+      <div class="field">
+        <label>株数</label>
+        <input type="number" name="quantity" value="100" min="0" step="1">
+      </div>
+      <div class="field">
+        <label>購入価格</label>
+        <input type="number" name="buy_price" step="0.01" required>
+      </div>
+      <div class="field">
+        <label>購入日</label>
+        <input type="date" name="buy_date" value="{{ today }}" required>
+      </div>
+      <div class="field wide">
+        <label>メモ</label>
+        <input type="text" name="memo" placeholder="購入理由など">
+      </div>
+      <button type="submit" class="btn primary">追加</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>保有中 ({{ holding|length }})</h2>
+    {% if not holding %}
+      <p class="muted">保有中の銘柄はまだありません。</p>
+    {% else %}
+    <div class="table-wrap">
+    <table class="stock-table">
+      <thead>
+        <tr>
+          <th>銘柄</th>
+          <th>購入価格</th>
+          <th>購入日</th>
+          <th>現在値</th>
+          <th>購入時からの騰落</th>
+          <th>メモ</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in holding %}
+        <tr>
+          <td>
+            <button class="link-btn chart-btn" data-id="{{ s.id }}" data-name="{{ s.name }}">{{ s.name }}</button>
+            <div class="ticker-sub">{{ s.ticker }}</div>
+          </td>
+          <td>{{ '%.2f'|format(s.buy_price) }}</td>
+          <td>{{ s.buy_date }}</td>
+          <td>{% if s.current_price is not none %}{{ '%.2f'|format(s.current_price) }} {{ s.currency }}{% else %}取得失敗{% endif %}</td>
+          <td>
+            {% if s.change_from_buy_pct is not none %}
+              <span class="chg {{ 'up' if s.change_from_buy_pct > 0 else ('down' if s.change_from_buy_pct < 0 else '') }}">
+                {{ '▲' if s.change_from_buy_pct > 0 else ('▼' if s.change_from_buy_pct < 0 else '―') }}
+                {{ '%.2f'|format(s.change_from_buy_pct) }}%
+              </span>
+            {% else %}―{% endif %}
+          </td>
+          <td>
+            <form action="{{ url_for('update_memo', stock_id=s.id) }}" method="post" class="memo-form">
+              <input type="text" name="memo" value="{{ s.memo or '' }}" placeholder="メモ">
+              <button type="submit" class="btn small">保存</button>
+            </form>
+          </td>
+          <td class="actions">
+            <details>
+              <summary class="btn small">売却記録</summary>
+              <form action="{{ url_for('sell', stock_id=s.id) }}" method="post" class="sell-form">
+                <input type="number" name="sell_price" step="0.01" placeholder="売却価格" required>
+                <input type="date" name="sell_date" value="{{ today }}" required>
+                <button type="submit" class="btn small primary">売却を記録</button>
+              </form>
+            </details>
+            <form action="{{ url_for('delete', stock_id=s.id) }}" method="post" onsubmit="return confirm('削除しますか?');">
+              <button type="submit" class="btn small danger">削除</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>売却済み ({{ sold|length }})</h2>
+    {% if not sold %}
+      <p class="muted">売却済みの銘柄はまだありません。</p>
+    {% else %}
+    <div class="table-wrap">
+    <table class="stock-table">
+      <thead>
+        <tr>
+          <th>銘柄</th>
+          <th>購入価格 / 日</th>
+          <th>売却価格 / 日</th>
+          <th>実現損益</th>
+          <th>現在値</th>
+          <th>売却後の騰落(見送り確認)</th>
+          <th>メモ</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in sold %}
+        <tr>
+          <td>
+            <button class="link-btn chart-btn" data-id="{{ s.id }}" data-name="{{ s.name }}">{{ s.name }}</button>
+            <div class="ticker-sub">{{ s.ticker }}</div>
+          </td>
+          <td>{{ '%.2f'|format(s.buy_price) }} / {{ s.buy_date }}</td>
+          <td>{{ '%.2f'|format(s.sell_price) }} / {{ s.sell_date }}</td>
+          <td>
+            {% if s.realized_pct is not none %}
+              <span class="chg {{ 'up' if s.realized_pct > 0 else ('down' if s.realized_pct < 0 else '') }}">
+                {{ '▲' if s.realized_pct > 0 else ('▼' if s.realized_pct < 0 else '―') }}
+                {{ '%.2f'|format(s.realized_pct) }}%
+              </span>
+            {% else %}―{% endif %}
+          </td>
+          <td>{% if s.current_price is not none %}{{ '%.2f'|format(s.current_price) }} {{ s.currency }}{% else %}取得失敗{% endif %}</td>
+          <td>
+            {% if s.change_since_sell_pct is not none %}
+              <span class="chg {{ 'up' if s.change_since_sell_pct > 0 else ('down' if s.change_since_sell_pct < 0 else '') }}">
+                {{ '▲' if s.change_since_sell_pct > 0 else ('▼' if s.change_since_sell_pct < 0 else '―') }}
+                {{ '%.2f'|format(s.change_since_sell_pct) }}%
+              </span>
+              <div class="hint">{% if s.change_since_sell_pct > 0 %}売却後も上昇中{% elif s.change_since_sell_pct < 0 %}売却後は下落{% else %}変動なし{% endif %}</div>
+            {% else %}―{% endif %}
+          </td>
+          <td>
+            <form action="{{ url_for('update_memo', stock_id=s.id) }}" method="post" class="memo-form">
+              <input type="text" name="memo" value="{{ s.memo or '' }}" placeholder="メモ">
+              <button type="submit" class="btn small">保存</button>
+            </form>
+          </td>
+          <td class="actions">
+            <form action="{{ url_for('unsell', stock_id=s.id) }}" method="post">
+              <button type="submit" class="btn small">売却取消</button>
+            </form>
+            <form action="{{ url_for('delete', stock_id=s.id) }}" method="post" onsubmit="return confirm('削除しますか?');">
+              <button type="submit" class="btn small danger">削除</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+  </section>
+</main>
+
+<div id="chart-modal" class="modal hidden">
+  <div class="modal-content">
+    <button id="modal-close" class="btn small">✕ 閉じる</button>
+    <h3 id="modal-title"></h3>
+    <canvas id="price-chart" height="120"></canvas>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

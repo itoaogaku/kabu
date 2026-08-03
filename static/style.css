@@ -1,0 +1,128 @@
+:root {
+  --bg: #f5f6f8;
+  --card-bg: #ffffff;
+  --text: #1c1e21;
+  --muted: #767b85;
+  --border: #e4e6eb;
+  --primary: #2563eb;
+  --up: #d92b2b;   /* 日本の相場慣習: 上昇=赤 */
+  --down: #1a63c9; /* 下落=青 */
+  --danger: #b91c1c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.topbar h1 { font-size: 1.2rem; margin: 0; }
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+
+main {
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.card h2 { margin-top: 0; font-size: 1.05rem; }
+
+.muted { color: var(--muted); font-size: 0.9rem; }
+
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.field.wide { flex: 1 1 200px; }
+.field input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: #fff; }
+.btn.small { padding: 4px 8px; font-size: 0.78rem; }
+.btn:hover { filter: brightness(0.96); }
+
+.table-wrap { overflow-x: auto; }
+.stock-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.stock-table th, .stock-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.stock-table td.actions { display: flex; flex-direction: column; gap: 6px; }
+
+.ticker-sub { color: var(--muted); font-size: 0.75rem; }
+
+.chg.up { color: var(--up); font-weight: 600; }
+.chg.down { color: var(--down); font-weight: 600; }
+.hint { font-size: 0.72rem; color: var(--muted); white-space: normal; }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.memo-form { display: flex; gap: 6px; }
+.memo-form input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; width: 110px; }
+
+.sell-form { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.sell-form input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 20;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: min(700px, 92vw);
+}
