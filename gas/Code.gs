@@ -153,12 +153,11 @@ function ensureScratchSheet_() {
 // ティッカー正規化・GOOGLEFINANCE ヘルパー
 // ------------------------------------------------------------------
 
-// 例: "7203" -> "TYO:7203" (東証), "AAPL" -> "AAPL", "TYO:7203" -> そのまま
+// GOOGLEFINANCE は東証銘柄について "TYO:" 等の取引所プレフィックスを付けると
+// #N/A になり、プレフィックス無しの裸のコードでないと解決できないことを確認済み。
+// 例: "7203" -> "7203", "AAPL" -> "AAPL", "NASDAQ:AAPL" -> そのまま(既に明示的な場合のみ維持)
 function normalizeTicker(raw) {
-  var t = String(raw).trim().toUpperCase();
-  if (t.indexOf(':') !== -1) return t;
-  if (/^\d{3,4}[A-Z0-9]?$/.test(t)) return 'TYO:' + t;
-  return t;
+  return String(raw).trim().toUpperCase();
 }
 
 function withLock_(fn) {
@@ -386,6 +385,31 @@ function importLots(lots) {
   }
   SpreadsheetApp.flush();
   return getStocks();
+}
+
+// 過去に "TYO:" プレフィックス付きで登録してしまった行を修復する(1回限りの
+// メンテナンス用。Apps Script エディタから直接実行する)。
+// normalizeTicker() の仕様変更(TYO: を付けないよう修正)に合わせて、
+// 既存行の gf_ticker 列と現在値の数式を裸のコードに直す。
+function fixTickerFormat() {
+  var sheet = getStocksSheet_();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+  var count = 0;
+  for (var r = 2; r <= lastRow; r++) {
+    var gfTicker = String(sheet.getRange(r, COL.GF_TICKER).getValue());
+    if (gfTicker.indexOf('TYO:') === 0) {
+      var fixed = gfTicker.slice(4);
+      sheet.getRange(r, COL.GF_TICKER).setValue(fixed);
+      sheet.getRange(r, COL.CURRENT_PRICE).setFormula(
+        '=IFERROR(GOOGLEFINANCE("' + fixed.replace(/"/g, '') + '"),"")'
+      );
+      count++;
+    }
+  }
+  SpreadsheetApp.flush();
+  Logger.log('修正件数: ' + count);
+  return count;
 }
 
 function sellStock(id, sellPrice, sellDate) {
