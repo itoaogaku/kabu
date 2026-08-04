@@ -70,6 +70,26 @@ def update_memo(stock_id, memo):
         conn.execute("UPDATE stocks SET memo = ? WHERE id = ?", (memo, stock_id))
 
 
+def update_stock(stock_id, quantity=None, buy_price=None, buy_date=None, sell_price=None, sell_date=None):
+    """入力ミスの修正用。渡されたフィールドだけを更新する。"""
+    fields = {
+        "quantity": quantity,
+        "buy_price": buy_price,
+        "buy_date": buy_date,
+        "sell_price": sell_price,
+        "sell_date": sell_date,
+    }
+    fields = {k: v for k, v in fields.items() if v is not None and v != ""}
+    if not fields:
+        return
+    with get_conn() as conn:
+        set_clause = ", ".join(f"{k} = ?" for k in fields)
+        conn.execute(
+            f"UPDATE stocks SET {set_clause} WHERE id = ?",
+            (*fields.values(), stock_id),
+        )
+
+
 def mark_sold(stock_id, sell_price, sell_date):
     with get_conn() as conn:
         conn.execute(

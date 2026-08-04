@@ -109,6 +109,14 @@ function holdingRowHtml(s) {
             '<button type="submit" class="btn small primary">売却を記録</button>' +
           '</form>' +
         '</details>' +
+        '<details><summary class="btn small">編集</summary>' +
+          '<form class="edit-form" data-id="' + s.id + '">' +
+            '<label class="edit-label">株数<input type="number" name="quantity" value="' + s.quantity + '" step="1"></label>' +
+            '<label class="edit-label">購入価格<input type="number" name="buy_price" value="' + s.buy_price + '" step="0.01"></label>' +
+            '<label class="edit-label">購入日<input type="date" name="buy_date" value="' + s.buy_date + '"></label>' +
+            '<button type="submit" class="btn small primary">保存</button>' +
+          '</form>' +
+        '</details>' +
         '<button type="button" class="btn small danger delete-btn" data-id="' + s.id + '">削除</button>' +
       '</td>' +
     '</tr>';
@@ -134,6 +142,16 @@ function soldRowHtml(s) {
       '<td>' + chgHtml(s.change_since_sell_pct) + hint + '</td>' +
       '<td class="col-name"><form class="memo-form" data-id="' + s.id + '"><input type="text" name="memo" value="' + escapeHtml(s.memo) + '" placeholder="メモ"><button type="submit" class="btn small">保存</button></form></td>' +
       '<td class="col-actions actions">' +
+        '<details><summary class="btn small">編集</summary>' +
+          '<form class="edit-form" data-id="' + s.id + '">' +
+            '<label class="edit-label">株数<input type="number" name="quantity" value="' + s.quantity + '" step="1"></label>' +
+            '<label class="edit-label">購入価格<input type="number" name="buy_price" value="' + s.buy_price + '" step="0.01"></label>' +
+            '<label class="edit-label">購入日<input type="date" name="buy_date" value="' + s.buy_date + '"></label>' +
+            '<label class="edit-label">売却価格<input type="number" name="sell_price" value="' + s.sell_price + '" step="0.01"></label>' +
+            '<label class="edit-label">売却日<input type="date" name="sell_date" value="' + s.sell_date + '"></label>' +
+            '<button type="submit" class="btn small primary">保存</button>' +
+          '</form>' +
+        '</details>' +
         '<button type="button" class="btn small unsell-btn" data-id="' + s.id + '">売却取消</button>' +
         '<button type="button" class="btn small danger delete-btn" data-id="' + s.id + '">削除</button>' +
       '</td>' +
@@ -232,6 +250,13 @@ function handleTableSubmit(e) {
     showLoading(true);
     callApi('sell', { id: form.dataset.id, sell_price: form.sell_price.value, sell_date: form.sell_date.value })
       .then(render).catch(onError);
+  } else if (form.classList.contains('edit-form')) {
+    e.preventDefault();
+    showLoading(true);
+    var data = { id: form.dataset.id, quantity: form.quantity.value, buy_price: form.buy_price.value, buy_date: form.buy_date.value };
+    if (form.sell_price) data.sell_price = form.sell_price.value;
+    if (form.sell_date) data.sell_date = form.sell_date.value;
+    callApi('update', data).then(render).catch(onError);
   }
 }
 

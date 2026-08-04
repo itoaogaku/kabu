@@ -135,6 +135,23 @@ def update_memo(stock_id):
     return redirect(url_for("index"))
 
 
+@app.route("/stock/<int:stock_id>/edit", methods=["POST"])
+def edit(stock_id):
+    def _float_or_none(key):
+        value = request.form.get(key, "").strip()
+        return float(value) if value else None
+
+    db.update_stock(
+        stock_id,
+        quantity=_float_or_none("quantity"),
+        buy_price=_float_or_none("buy_price"),
+        buy_date=request.form.get("buy_date", "").strip() or None,
+        sell_price=_float_or_none("sell_price"),
+        sell_date=request.form.get("sell_date", "").strip() or None,
+    )
+    return redirect(url_for("index"))
+
+
 @app.route("/stock/<int:stock_id>/delete", methods=["POST"])
 def delete(stock_id):
     db.delete_stock(stock_id)

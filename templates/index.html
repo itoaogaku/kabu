@@ -145,6 +145,15 @@
                   <button type="submit" class="btn small primary">売却を記録</button>
                 </form>
               </details>
+              <details>
+                <summary class="btn small">編集</summary>
+                <form action="{{ url_for('edit', stock_id=s.id) }}" method="post" class="edit-form">
+                  <label class="edit-label">株数<input type="number" name="quantity" value="{{ s.quantity }}" step="1"></label>
+                  <label class="edit-label">購入価格<input type="number" name="buy_price" value="{{ s.buy_price }}" step="0.01"></label>
+                  <label class="edit-label">購入日<input type="date" name="buy_date" value="{{ s.buy_date }}"></label>
+                  <button type="submit" class="btn small primary">保存</button>
+                </form>
+              </details>
               <form action="{{ url_for('delete', stock_id=s.id) }}" method="post" onsubmit="return confirm('削除しますか?');">
                 <button type="submit" class="btn small danger">削除</button>
               </form>
@@ -214,6 +223,17 @@
               </form>
             </td>
             <td class="col-actions actions">
+              <details>
+                <summary class="btn small">編集</summary>
+                <form action="{{ url_for('edit', stock_id=s.id) }}" method="post" class="edit-form">
+                  <label class="edit-label">株数<input type="number" name="quantity" value="{{ s.quantity }}" step="1"></label>
+                  <label class="edit-label">購入価格<input type="number" name="buy_price" value="{{ s.buy_price }}" step="0.01"></label>
+                  <label class="edit-label">購入日<input type="date" name="buy_date" value="{{ s.buy_date }}"></label>
+                  <label class="edit-label">売却価格<input type="number" name="sell_price" value="{{ s.sell_price }}" step="0.01"></label>
+                  <label class="edit-label">売却日<input type="date" name="sell_date" value="{{ s.sell_date }}"></label>
+                  <button type="submit" class="btn small primary">保存</button>
+                </form>
+              </details>
               <form action="{{ url_for('unsell', stock_id=s.id) }}" method="post">
                 <button type="submit" class="btn small">売却取消</button>
               </form>

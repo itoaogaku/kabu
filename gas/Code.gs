@@ -94,6 +94,15 @@ function handleApi_(e) {
       case 'unsell':
         result = unsellStock(p.id);
         break;
+      case 'update':
+        result = updateStock(p.id, {
+          quantity: p.quantity,
+          buy_price: p.buy_price,
+          buy_date: p.buy_date,
+          sell_price: p.sell_price,
+          sell_date: p.sell_date
+        });
+        break;
       case 'memo':
         result = updateMemo(p.id, p.memo);
         break;
@@ -488,6 +497,35 @@ function updateMemo(id, memo) {
   var sheet = getStocksSheet_();
   var row = findRow_(sheet, id);
   sheet.getRange(row, COL.MEMO).setValue(memo || '');
+  return getStocks();
+}
+
+// 入力ミスの修正用。渡されたフィールドだけを更新する(未指定 or 空文字は変更しない)。
+// data: { quantity, buy_price, buy_date, sell_price, sell_date }
+function updateStock(id, data) {
+  var sheet = getStocksSheet_();
+  var row = findRow_(sheet, id);
+  data = data || {};
+
+  if (data.quantity !== undefined && data.quantity !== '' && data.quantity !== null) {
+    sheet.getRange(row, COL.QUANTITY).setValue(Number(data.quantity));
+  }
+  if (data.buy_price !== undefined && data.buy_price !== '' && data.buy_price !== null) {
+    sheet.getRange(row, COL.BUY_PRICE).setValue(Number(data.buy_price));
+  }
+  if (data.buy_date) {
+    sheet.getRange(row, COL.BUY_DATE).setValue(parseDate_(data.buy_date));
+    sheet.getRange(row, COL.BUY_DATE).setNumberFormat('yyyy-mm-dd');
+  }
+  if (data.sell_price !== undefined && data.sell_price !== '' && data.sell_price !== null) {
+    sheet.getRange(row, COL.SELL_PRICE).setValue(Number(data.sell_price));
+  }
+  if (data.sell_date) {
+    sheet.getRange(row, COL.SELL_DATE).setValue(parseDate_(data.sell_date));
+    sheet.getRange(row, COL.SELL_DATE).setNumberFormat('yyyy-mm-dd');
+  }
+
+  SpreadsheetApp.flush();
   return getStocks();
 }
 
