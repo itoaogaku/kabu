@@ -1,0 +1,12 @@
+{
+  "name": "かぶトラッカー",
+  "short_name": "かぶトラッカー",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2f3f5",
+  "theme_color": "#1a56c4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

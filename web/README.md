@@ -75,6 +75,9 @@ python3 -m http.server 8000 --directory public
 
 - `public/index.html` / `style.css` / `app.js` — 画面本体(GAS版の見た目・挙動を踏襲)
 - `public/chart.umd.min.js` — Chart.js をローカル同梱(CDN不要)
+- `public/favicon.ico` / `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` / `manifest.json` —
+  ブラウザタブおよびiPhone/Androidの「ホーム画面に追加」用アイコン。iOSでホーム画面に
+  追加するとこのアイコンで独立したアプリのように起動する(Safariのアドレスバー等は非表示)
 - `public/config.example.js` — ローカル動作確認用のテンプレート(`config.js` は各自作成)
 - `build.js` — Vercel のビルド時に環境変数から `public/config.js` を生成するスクリプト
 - `vercel.json` — ビルドコマンド・出力ディレクトリの指定
