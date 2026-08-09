@@ -1,5 +1,5 @@
 var todayStr = new Date().toISOString().slice(0, 10);
-document.querySelector('input[name="buy_date"]').value = todayStr;
+document.querySelector('input[name="date"]').value = todayStr;
 
 // --- GAS API 呼び出し ---
 
@@ -84,140 +84,166 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
   });
 });
 
-function holdingRowHtml(s) {
-  var priceKnown = s.current_price !== null;
-  var price = priceKnown ? fmt2(s.current_price) : '取得失敗';
-  var marketValue = priceKnown ? s.current_price * s.quantity : null;
-  var costValue = s.buy_price * s.quantity;
-  var pnl = priceKnown ? marketValue - costValue : null;
-  return '' +
-    '<tr>' +
-      '<td class="col-name"><button type="button" class="link-btn chart-btn" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</button>' +
-        '<div class="ticker-sub">' + escapeHtml(s.ticker) + '</div></td>' +
-      '<td>' + s.quantity.toLocaleString('ja-JP') + '株</td>' +
-      '<td>' + fmt2(s.buy_price) + '</td>' +
-      '<td>' + s.buy_date + '</td>' +
-      '<td>' + price + '</td>' +
-      '<td>' + (marketValue !== null ? fmtYen(marketValue) : '―') + '</td>' +
-      '<td>' + (pnl !== null ? '<span class="chg ' + chgClass(pnl) + '">' + fmtYenSigned(pnl) + '</span><div class="hint">' + chgHtml(s.change_from_buy_pct) + '</div>' : '―') + '</td>' +
-      '<td class="col-name"><form class="memo-form" data-id="' + s.id + '"><input type="text" name="memo" value="' + escapeHtml(s.memo) + '" placeholder="メモ"><button type="submit" class="btn small">保存</button></form></td>' +
-      '<td class="col-actions actions">' +
-        '<details><summary class="btn small">売却記録</summary>' +
-          '<form class="sell-form" data-id="' + s.id + '">' +
-            '<input type="number" name="sell_price" step="0.01" placeholder="売却価格" required>' +
-            '<input type="date" name="sell_date" value="' + todayStr + '" required>' +
-            '<button type="submit" class="btn small primary">売却を記録</button>' +
-          '</form>' +
-        '</details>' +
-        '<details><summary class="btn small">編集</summary>' +
-          '<form class="edit-form" data-id="' + s.id + '">' +
-            '<label class="edit-label">株数<input type="number" name="quantity" value="' + s.quantity + '" step="1"></label>' +
-            '<label class="edit-label">購入価格<input type="number" name="buy_price" value="' + s.buy_price + '" step="0.01"></label>' +
-            '<label class="edit-label">購入日<input type="date" name="buy_date" value="' + s.buy_date + '"></label>' +
-            '<button type="submit" class="btn small primary">保存</button>' +
-          '</form>' +
-        '</details>' +
-        '<button type="button" class="btn small danger delete-btn" data-id="' + s.id + '">削除</button>' +
-      '</td>' +
-    '</tr>';
-}
+// --- 銘柄一覧 ---
 
-function soldRowHtml(s) {
-  var price = s.current_price !== null ? fmt2(s.current_price) : '取得失敗';
-  var realizedYen = (s.sell_price - s.buy_price) * s.quantity;
-  var hint = '';
-  if (s.change_since_sell_pct !== null) {
-    var label = s.change_since_sell_pct > 0 ? '売却後も上昇中' : (s.change_since_sell_pct < 0 ? '売却後は下落' : '変動なし');
-    hint = '<div class="hint">' + label + '</div>';
-  }
-  return '' +
-    '<tr>' +
-      '<td class="col-name"><button type="button" class="link-btn chart-btn" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</button>' +
-        '<div class="ticker-sub">' + escapeHtml(s.ticker) + '</div></td>' +
-      '<td>' + s.quantity.toLocaleString('ja-JP') + '株</td>' +
-      '<td>' + fmt2(s.buy_price) + ' / ' + s.buy_date + '</td>' +
-      '<td>' + fmt2(s.sell_price) + ' / ' + s.sell_date + '</td>' +
-      '<td><span class="chg ' + chgClass(realizedYen) + '">' + fmtYenSigned(realizedYen) + '</span><div class="hint">' + chgHtml(s.realized_pct) + '</div></td>' +
-      '<td>' + price + '</td>' +
-      '<td>' + chgHtml(s.change_since_sell_pct) + hint + '</td>' +
-      '<td class="col-name"><form class="memo-form" data-id="' + s.id + '"><input type="text" name="memo" value="' + escapeHtml(s.memo) + '" placeholder="メモ"><button type="submit" class="btn small">保存</button></form></td>' +
-      '<td class="col-actions actions">' +
-        '<details><summary class="btn small">編集</summary>' +
-          '<form class="edit-form" data-id="' + s.id + '">' +
-            '<label class="edit-label">株数<input type="number" name="quantity" value="' + s.quantity + '" step="1"></label>' +
-            '<label class="edit-label">購入価格<input type="number" name="buy_price" value="' + s.buy_price + '" step="0.01"></label>' +
-            '<label class="edit-label">購入日<input type="date" name="buy_date" value="' + s.buy_date + '"></label>' +
-            '<label class="edit-label">売却価格<input type="number" name="sell_price" value="' + s.sell_price + '" step="0.01"></label>' +
-            '<label class="edit-label">売却日<input type="date" name="sell_date" value="' + s.sell_date + '"></label>' +
-            '<button type="submit" class="btn small primary">保存</button>' +
-          '</form>' +
-        '</details>' +
-        '<button type="button" class="btn small unsell-btn" data-id="' + s.id + '">売却取消</button>' +
-        '<button type="button" class="btn small danger delete-btn" data-id="' + s.id + '">削除</button>' +
-      '</td>' +
-    '</tr>';
-}
+var lastSummary = [];
 
-function renderSummary(holding, sold) {
-  var costTotal = 0;
-  var marketTotal = 0;
-  var marketKnown = false;
-  holding.forEach(function (s) {
-    costTotal += s.buy_price * s.quantity;
-    if (s.current_price !== null) {
-      marketTotal += s.current_price * s.quantity;
-      marketKnown = true;
-    }
-  });
-  var unrealized = marketKnown ? marketTotal - costTotal : null;
-  var unrealizedPct = (marketKnown && costTotal) ? Math.round(unrealized / costTotal * 10000) / 100 : null;
-
-  var realizedTotal = 0;
-  sold.forEach(function (s) {
-    realizedTotal += (s.sell_price - s.buy_price) * s.quantity;
-  });
-
-  document.getElementById('sum-market-value').textContent = marketKnown ? fmtYen(marketTotal) : '取得中…';
-  document.getElementById('sum-cost-value').textContent = fmtYen(costTotal);
-
-  var unrealizedEl = document.getElementById('sum-unrealized');
-  unrealizedEl.textContent = unrealized !== null
-    ? fmtYenSigned(unrealized) + ' (' + (unrealizedPct > 0 ? '+' : '') + unrealizedPct.toFixed(2) + '%)'
+function stockRowHtml(s) {
+  var qtyText = s.is_holding ? (s.net_quantity.toLocaleString('ja-JP') + '株') : '保有なし';
+  var avgBuyText = s.avg_buy_price !== null ? fmt2(s.avg_buy_price) : '―';
+  var priceText = s.current_price !== null ? fmt2(s.current_price) : '取得失敗';
+  var marketValueText = s.market_value !== null ? fmtYen(s.market_value) : '―';
+  var unrealizedHtml = s.unrealized_pnl !== null
+    ? '<span class="chg ' + chgClass(s.unrealized_pnl) + '">' + fmtYenSigned(s.unrealized_pnl) + '</span>'
     : '―';
-  unrealizedEl.className = 'value ' + (unrealized !== null ? chgClass(unrealized) : '');
+  var realizedHtml = s.realized_pnl !== null
+    ? '<span class="chg ' + chgClass(s.realized_pnl) + '">' + fmtYenSigned(s.realized_pnl) + '</span>'
+    : '―';
+  var refLabelText = s.reference_label === 'avg_buy' ? '平均取得単価比' : (s.reference_label === 'last_sell' ? '前回売却比' : '');
+  var changeHtml = s.change_pct !== null
+    ? chgHtml(s.change_pct) + '<div class="hint">' + refLabelText + '</div>'
+    : '―';
+  var alertBadge = s.drop_alert ? '<div class="alert-badge">🔻買い時?</div>' : '';
+  var lastTxn = s.last_transaction;
+  var lastTxnHtml = lastTxn
+    ? '<span class="side-badge ' + lastTxn.side + '">' + (lastTxn.side === 'buy' ? '購入' : '売却') + '</span> ' +
+      lastTxn.date + '&nbsp;' + fmt2(lastTxn.price) + '円'
+    : '';
 
+  return '' +
+    '<tr class="' + (s.drop_alert ? 'is-alert' : '') + '">' +
+      '<td class="col-name">' +
+        '<button type="button" class="link-btn chart-btn" data-yf-ticker="' + escapeHtml(s.yf_ticker) + '" data-name="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</button>' +
+        '<div class="ticker-sub">' + escapeHtml(s.ticker) + '</div>' + alertBadge +
+      '</td>' +
+      '<td>' + qtyText + '</td>' +
+      '<td>' + avgBuyText + '</td>' +
+      '<td>' + priceText + '</td>' +
+      '<td>' + marketValueText + '</td>' +
+      '<td>' + unrealizedHtml + '</td>' +
+      '<td>' + realizedHtml + '</td>' +
+      '<td>' + changeHtml + '</td>' +
+      '<td class="col-name">' + lastTxnHtml + '</td>' +
+    '</tr>';
+}
+
+function renderStocks() {
+  var holdingOnly = document.getElementById('holding-only-check').checked;
+  var list = holdingOnly ? lastSummary.filter(function (s) { return s.is_holding; }) : lastSummary;
+  document.getElementById('stocks-count').textContent = lastSummary.length;
+  document.getElementById('stocks-empty').classList.toggle('hidden', lastSummary.length > 0);
+  document.getElementById('stocks-body').innerHTML = list.map(stockRowHtml).join('');
+}
+
+document.getElementById('holding-only-check').addEventListener('change', renderStocks);
+
+function renderSummaryCard() {
+  var marketTotal = 0, unrealizedTotal = 0, realizedTotal = 0, alertCount = 0;
+  var hasUnrealized = false, hasRealized = false;
+  lastSummary.forEach(function (s) {
+    if (s.market_value !== null) marketTotal += s.market_value;
+    if (s.unrealized_pnl !== null) { unrealizedTotal += s.unrealized_pnl; hasUnrealized = true; }
+    if (s.realized_pnl !== null) { realizedTotal += s.realized_pnl; hasRealized = true; }
+    if (s.drop_alert) alertCount++;
+  });
+  document.getElementById('sum-market-value').textContent = fmtYen(marketTotal);
+  document.getElementById('sum-alert-count').textContent = alertCount + '件';
+  var unrealizedEl = document.getElementById('sum-unrealized');
+  unrealizedEl.textContent = hasUnrealized ? fmtYenSigned(unrealizedTotal) : '¥0';
+  unrealizedEl.className = 'value ' + (hasUnrealized ? chgClass(unrealizedTotal) : '');
   var realizedEl = document.getElementById('sum-realized');
-  realizedEl.textContent = fmtYenSigned(realizedTotal);
-  realizedEl.className = 'value small ' + chgClass(realizedTotal);
+  realizedEl.textContent = hasRealized ? fmtYenSigned(realizedTotal) : '¥0';
+  realizedEl.className = 'value small ' + (hasRealized ? chgClass(realizedTotal) : '');
 }
 
-function render(stocks) {
-  var holding = stocks.filter(function (s) { return !s.is_sold; });
-  var sold = stocks.filter(function (s) { return s.is_sold; });
+// --- 取引履歴 ---
 
-  document.getElementById('holding-count').textContent = holding.length;
-  document.getElementById('sold-count').textContent = sold.length;
-  document.getElementById('holding-empty').classList.toggle('hidden', holding.length > 0);
-  document.getElementById('sold-empty').classList.toggle('hidden', sold.length > 0);
+var lastHistory = [];
 
-  document.getElementById('holding-body').innerHTML = holding.map(holdingRowHtml).join('');
-  document.getElementById('sold-body').innerHTML = sold.map(soldRowHtml).join('');
-
-  renderSummary(holding, sold);
-
-  setLastUpdated();
-  showLoading(false);
+function historyRowHtml(t) {
+  var amount = t.quantity * t.price;
+  var sideLabel = t.side === 'buy' ? '購入' : '売却';
+  return '' +
+    '<tr>' +
+      '<td>' + t.date + '</td>' +
+      '<td class="col-name">' + escapeHtml(t.name) + '<div class="ticker-sub">' + escapeHtml(t.ticker) + '</div></td>' +
+      '<td><span class="side-badge ' + t.side + '">' + sideLabel + '</span></td>' +
+      '<td>' + t.quantity.toLocaleString('ja-JP') + '株</td>' +
+      '<td>' + fmt2(t.price) + '</td>' +
+      '<td>' + fmtYen(amount) + '</td>' +
+      '<td class="col-name">' + escapeHtml(t.memo) + '</td>' +
+      '<td class="col-actions actions">' +
+        '<details><summary class="btn small">編集</summary>' +
+          '<form class="edit-txn-form" data-id="' + t.id + '">' +
+            '<label class="edit-label">証券コード<input type="text" name="ticker" value="' + escapeHtml(t.ticker) + '"></label>' +
+            '<label class="edit-label">銘柄名<input type="text" name="name" value="' + escapeHtml(t.name) + '"></label>' +
+            '<label class="edit-label">区分<select name="side">' +
+              '<option value="buy"' + (t.side === 'buy' ? ' selected' : '') + '>購入</option>' +
+              '<option value="sell"' + (t.side === 'sell' ? ' selected' : '') + '>売却</option>' +
+            '</select></label>' +
+            '<label class="edit-label">株数<input type="number" name="quantity" value="' + t.quantity + '" step="1"></label>' +
+            '<label class="edit-label">単価<input type="number" name="price" value="' + t.price + '" step="0.01"></label>' +
+            '<label class="edit-label">日付<input type="date" name="date" value="' + t.date + '"></label>' +
+            '<label class="edit-label">メモ<input type="text" name="memo" value="' + escapeHtml(t.memo) + '"></label>' +
+            '<button type="submit" class="btn small primary">保存</button>' +
+          '</form>' +
+        '</details>' +
+        '<button type="button" class="btn small danger delete-txn-btn" data-id="' + t.id + '">削除</button>' +
+      '</td>' +
+    '</tr>';
 }
+
+function renderHistory() {
+  document.getElementById('history-count').textContent = lastHistory.length;
+  document.getElementById('history-empty').classList.toggle('hidden', lastHistory.length > 0);
+  document.getElementById('history-body').innerHTML = lastHistory.map(historyRowHtml).join('');
+}
+
+// --- 読み込み・エラー処理 ---
 
 function onError(err) {
   showLoading(false);
   alert('エラー: ' + (err && err.message ? err.message : err));
 }
 
-function loadStocks() {
+function loadAll() {
   showLoading(true);
-  callApi('list').then(render).catch(onError);
+  Promise.all([callApi('summary'), callApi('transactions')])
+    .then(function (results) {
+      lastSummary = results[0];
+      lastHistory = results[1];
+      renderStocks();
+      renderSummaryCard();
+      renderHistory();
+      setLastUpdated();
+      showLoading(false);
+    })
+    .catch(onError);
 }
+
+function applySummary(summary) {
+  lastSummary = summary;
+  renderStocks();
+  renderSummaryCard();
+  setLastUpdated();
+}
+
+function reloadHistoryAnd(summaryPromise) {
+  showLoading(true);
+  summaryPromise
+    .then(function (summary) {
+      applySummary(summary);
+      return callApi('transactions');
+    })
+    .then(function (txns) {
+      lastHistory = txns;
+      renderHistory();
+      showLoading(false);
+    })
+    .catch(onError);
+}
+
+// --- 取引の追加・編集・削除 ---
 
 document.getElementById('add-form').addEventListener('submit', function (e) {
   e.preventDefault();
@@ -225,68 +251,63 @@ document.getElementById('add-form').addEventListener('submit', function (e) {
   var data = {
     ticker: form.ticker.value,
     name: form.name.value,
+    side: form.side.value,
     quantity: form.quantity.value,
-    buy_price: form.buy_price.value,
-    buy_date: form.buy_date.value,
+    price: form.price.value,
+    date: form.date.value,
     memo: form.memo.value
   };
-  showLoading(true);
-  callApi('add', data).then(function (stocks) {
+  reloadHistoryAnd(callApi('add', data).then(function (summary) {
     form.reset();
-    form.buy_date.value = todayStr;
+    form.date.value = todayStr;
     form.quantity.value = 100;
-    render(stocks);
-  }).catch(onError);
+    return summary;
+  }));
 });
 
-function handleTableSubmit(e) {
+document.getElementById('history-body').addEventListener('submit', function (e) {
   var form = e.target;
-  if (form.classList.contains('memo-form')) {
-    e.preventDefault();
-    showLoading(true);
-    callApi('memo', { id: form.dataset.id, memo: form.memo.value }).then(render).catch(onError);
-  } else if (form.classList.contains('sell-form')) {
-    e.preventDefault();
-    showLoading(true);
-    callApi('sell', { id: form.dataset.id, sell_price: form.sell_price.value, sell_date: form.sell_date.value })
-      .then(render).catch(onError);
-  } else if (form.classList.contains('edit-form')) {
-    e.preventDefault();
-    showLoading(true);
-    var data = { id: form.dataset.id, quantity: form.quantity.value, buy_price: form.buy_price.value, buy_date: form.buy_date.value };
-    if (form.sell_price) data.sell_price = form.sell_price.value;
-    if (form.sell_date) data.sell_date = form.sell_date.value;
-    callApi('update', data).then(render).catch(onError);
-  }
-}
+  if (!form.classList.contains('edit-txn-form')) return;
+  e.preventDefault();
+  var data = {
+    id: form.dataset.id,
+    ticker: form.ticker.value,
+    name: form.name.value,
+    side: form.side.value,
+    quantity: form.quantity.value,
+    price: form.price.value,
+    date: form.date.value,
+    memo: form.memo.value
+  };
+  reloadHistoryAnd(callApi('update', data));
+});
 
-function handleTableClick(e) {
+document.getElementById('history-body').addEventListener('click', function (e) {
+  var target = e.target;
+  if (target.classList.contains('delete-txn-btn')) {
+    if (confirm('この取引を削除しますか?')) {
+      reloadHistoryAnd(callApi('delete', { id: target.dataset.id }));
+    }
+  }
+});
+
+document.getElementById('stocks-body').addEventListener('click', function (e) {
   var target = e.target;
   if (target.classList.contains('chart-btn')) {
-    openChart(target.dataset.id, target.dataset.name);
-  } else if (target.classList.contains('delete-btn')) {
-    if (confirm('削除しますか?')) {
-      showLoading(true);
-      callApi('delete', { id: target.dataset.id }).then(render).catch(onError);
-    }
-  } else if (target.classList.contains('unsell-btn')) {
-    showLoading(true);
-    callApi('unsell', { id: target.dataset.id }).then(render).catch(onError);
+    openChart(target.dataset.yfTicker, target.dataset.name);
   }
-}
-
-document.getElementById('holding-body').addEventListener('submit', handleTableSubmit);
-document.getElementById('sold-body').addEventListener('submit', handleTableSubmit);
-document.getElementById('holding-body').addEventListener('click', handleTableClick);
-document.getElementById('sold-body').addEventListener('click', handleTableClick);
+});
 
 document.getElementById('refresh-btn').addEventListener('click', function () {
   showLoading(true);
-  callApi('refresh').then(render).catch(onError);
+  callApi('refresh').then(function (summary) {
+    applySummary(summary);
+    showLoading(false);
+  }).catch(onError);
 });
 
 setInterval(function () {
-  callApi('refresh').then(render).catch(function () {});
+  callApi('refresh').then(applySummary).catch(function () {});
 }, 5 * 60 * 1000);
 
 // --- チャートモーダル ---
@@ -300,10 +321,10 @@ modal.addEventListener('click', function (e) {
 });
 
 var chartInstance = null;
-function openChart(id, name) {
+function openChart(yfTicker, name) {
   modalTitle.textContent = name + ' の株価推移';
   modal.classList.remove('hidden');
-  callApi('history', { id: id }).then(function (data) {
+  callApi('history', { yf_ticker: yfTicker }).then(function (data) {
     var labels = data.history.map(function (h) { return h.date; });
     var closes = data.history.map(function (h) { return h.close; });
     var ctx = document.getElementById('price-chart').getContext('2d');
@@ -313,8 +334,8 @@ function openChart(id, name) {
       data: {
         labels: labels,
         datasets: [{
-          label: '終値', data: closes, borderColor: '#2563eb',
-          backgroundColor: 'rgba(37,99,235,0.1)', tension: 0.2, pointRadius: 0
+          label: '終値', data: closes, borderColor: '#1a56c4',
+          backgroundColor: 'rgba(26,86,196,0.1)', tension: 0.2, pointRadius: 0
         }]
       },
       options: {
@@ -326,4 +347,4 @@ function openChart(id, name) {
   }).catch(onError);
 }
 
-loadStocks();
+loadAll();

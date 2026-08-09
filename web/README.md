@@ -1,7 +1,7 @@
 # かぶトラッカー(Vercel フロントエンド版)
 
 見た目の良い URL で公開したい場合の構成です。データの保存・株価取得は
-これまで通り [`../gas/`](../gas/) の Google Apps Script(スプレッドシート + GOOGLEFINANCE)が
+これまで通り [`../gas/`](../gas/) の Google Apps Script(スプレッドシート + Yahoo Finance)が
 行い、ここにあるのは **Vercel でホストする静的なフロントエンド(画面)だけ** です。
 
 ```
@@ -29,7 +29,7 @@ Vercel 自体はデータを保存しない。バックエンドは引き続き 
 3. 「Add New...」→「Project」→ このリポジトリ(`itoaogaku/kabu`)を Import する。
 4. プロジェクト設定画面で以下を指定する。
    - **Root Directory**: `web` (「Edit」を押してこのフォルダを選択する。これを忘れると
-     ルート直下の Flask コードを Vercel がビルドしようとしてしまう)
+     リポジトリ直下を Vercel がビルドしようとしてしまう)
    - Framework Preset: 「Other」のままでよい(`web/vercel.json` に
      ビルドコマンド・出力ディレクトリが書いてあるので自動で使われる)
 5. 「Environment Variables」で以下を追加する。
