@@ -109,15 +109,78 @@ function stockRowHtml(s) {
     '</tr>';
 }
 
+// --- 並び順 ---
+
+function cmpNum(a, b, dir) {
+  var an = a === null || a === undefined || isNaN(a);
+  var bn = b === null || b === undefined || isNaN(b);
+  if (an && bn) return 0;
+  if (an) return 1;
+  if (bn) return -1;
+  return dir * (a - b);
+}
+
+function sortStocks(list, mode) {
+  var arr = list.slice();
+  switch (mode) {
+    case 'name':
+      arr.sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+      break;
+    case 'change_asc':
+      arr.sort(function (a, b) { return cmpNum(a.change_pct, b.change_pct, 1); });
+      break;
+    case 'change_desc':
+      arr.sort(function (a, b) { return cmpNum(a.change_pct, b.change_pct, -1); });
+      break;
+    case 'pnl_desc':
+      arr.sort(function (a, b) { return cmpNum(a.unrealized_pnl, b.unrealized_pnl, -1); });
+      break;
+    case 'pnl_asc':
+      arr.sort(function (a, b) { return cmpNum(a.unrealized_pnl, b.unrealized_pnl, 1); });
+      break;
+    case 'qty_desc':
+      arr.sort(function (a, b) { return cmpNum(a.net_quantity, b.net_quantity, -1); });
+      break;
+    case 'recent':
+      arr.sort(function (a, b) {
+        var ad = a.last_transaction ? a.last_transaction.date : '';
+        var bd = b.last_transaction ? b.last_transaction.date : '';
+        return bd.localeCompare(ad);
+      });
+      break;
+    case 'alert':
+    default:
+      arr.sort(function (a, b) {
+        if (a.drop_alert !== b.drop_alert) return a.drop_alert ? -1 : 1;
+        if (a.is_holding !== b.is_holding) return a.is_holding ? -1 : 1;
+        return cmpNum(a.change_pct, b.change_pct, 1);
+      });
+  }
+  return arr;
+}
+
+(function () {
+  try {
+    var saved = localStorage.getItem('kabu_sort_mode');
+    if (saved) document.getElementById('sort-select').value = saved;
+  } catch (e) {}
+})();
+
 function renderStocks() {
   var holdingOnly = document.getElementById('holding-only-check').checked;
+  var sortMode = document.getElementById('sort-select').value;
   var list = holdingOnly ? lastSummary.filter(function (s) { return s.is_holding; }) : lastSummary;
+  list = sortStocks(list, sortMode);
   document.getElementById('stocks-count').textContent = lastSummary.length;
   document.getElementById('stocks-empty').classList.toggle('hidden', lastSummary.length > 0);
   document.getElementById('stocks-body').innerHTML = list.map(stockRowHtml).join('');
 }
 
 document.getElementById('holding-only-check').addEventListener('change', renderStocks);
+document.getElementById('sort-select').addEventListener('change', function () {
+  try { localStorage.setItem('kabu_sort_mode', this.value); } catch (e) {}
+  renderStocks();
+});
 
 function renderSummaryCard() {
   var marketTotal = 0, unrealizedTotal = 0, realizedTotal = 0, alertCount = 0;

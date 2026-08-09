@@ -94,7 +94,21 @@
 
     <div class="tab-panel" id="panel-stocks">
       <div class="panel-toolbar">
-        <label class="filter-check"><input type="checkbox" id="holding-only-check"> 保有中のみ表示</label>
+        <div class="toolbar-left">
+          <label class="filter-check"><input type="checkbox" id="holding-only-check"> 保有中のみ表示</label>
+          <label class="sort-select-wrap">並び順:
+            <select id="sort-select">
+              <option value="alert">🔻アラート優先</option>
+              <option value="name">銘柄名順</option>
+              <option value="change_asc">騰落率が低い順</option>
+              <option value="change_desc">騰落率が高い順</option>
+              <option value="pnl_desc">評価損益が大きい順</option>
+              <option value="pnl_asc">評価損益が小さい順</option>
+              <option value="qty_desc">保有株数が多い順</option>
+              <option value="recent">直近取引が新しい順</option>
+            </select>
+          </label>
+        </div>
         <span class="muted">現在値が平均取得単価(保有中)または前回売却価格(売却済み)から-15%以上下がった銘柄には🔻が付きます</span>
       </div>
       <p id="stocks-empty" class="muted hidden">まだ取引がありません。</p>
