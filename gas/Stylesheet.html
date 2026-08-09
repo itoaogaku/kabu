@@ -256,4 +256,56 @@ main {
   .summary-grid { grid-template-columns: 1fr; }
   .summary-col + .summary-col { border-left: none; border-top: 1px solid var(--border); }
 }
+
+/* --- 狭い画面ではテーブルを横スクロールさせず、1行=1カードの縦積みにする --- */
+@media (max-width: 720px) {
+  .table-wrap { overflow-x: visible; }
+
+  .stock-table thead { display: none; }
+  .stock-table, .stock-table tbody, .stock-table tr, .stock-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .stock-table tr {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    background: var(--card-bg);
+  }
+  .stock-table tr.is-alert { background: var(--alert-bg); border-color: var(--alert-border); }
+  .stock-table tr:hover { background: var(--card-bg); }
+  .stock-table tr.is-alert:hover { background: var(--alert-bg); }
+
+  .stock-table td {
+    border-bottom: none !important;
+    padding: 0;
+    text-align: left !important;
+    white-space: normal;
+  }
+
+  .stock-table td.row-header {
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  .stock-table td[data-label] {
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border) !important;
+  }
+  .stock-table td[data-label]:last-of-type { border-bottom: none !important; }
+  .stock-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .stock-table td.col-actions {
+    padding-top: 10px;
+  }
+}
 </style>

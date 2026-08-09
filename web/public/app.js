@@ -113,18 +113,18 @@ function stockRowHtml(s) {
 
   return '' +
     '<tr class="' + (s.drop_alert ? 'is-alert' : '') + '">' +
-      '<td class="col-name">' +
+      '<td class="col-name row-header">' +
         '<button type="button" class="link-btn chart-btn" data-yf-ticker="' + escapeHtml(s.yf_ticker) + '" data-name="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</button>' +
         '<div class="ticker-sub">' + escapeHtml(s.ticker) + '</div>' + alertBadge +
       '</td>' +
-      '<td>' + qtyText + '</td>' +
-      '<td>' + avgBuyText + '</td>' +
-      '<td>' + priceText + '</td>' +
-      '<td>' + marketValueText + '</td>' +
-      '<td>' + unrealizedHtml + '</td>' +
-      '<td>' + realizedHtml + '</td>' +
-      '<td>' + changeHtml + '</td>' +
-      '<td class="col-name">' + lastTxnHtml + '</td>' +
+      '<td data-label="保有株数">' + qtyText + '</td>' +
+      '<td data-label="取得単価">' + avgBuyText + '</td>' +
+      '<td data-label="現在値">' + priceText + '</td>' +
+      '<td data-label="評価額">' + marketValueText + '</td>' +
+      '<td data-label="評価損益">' + unrealizedHtml + '</td>' +
+      '<td data-label="実現損益">' + realizedHtml + '</td>' +
+      '<td data-label="騰落">' + changeHtml + '</td>' +
+      '<td class="col-name" data-label="直近の取引">' + lastTxnHtml + '</td>' +
     '</tr>';
 }
 
@@ -166,13 +166,13 @@ function historyRowHtml(t) {
   var sideLabel = t.side === 'buy' ? '購入' : '売却';
   return '' +
     '<tr>' +
-      '<td>' + t.date + '</td>' +
-      '<td class="col-name">' + escapeHtml(t.name) + '<div class="ticker-sub">' + escapeHtml(t.ticker) + '</div></td>' +
-      '<td><span class="side-badge ' + t.side + '">' + sideLabel + '</span></td>' +
-      '<td>' + t.quantity.toLocaleString('ja-JP') + '株</td>' +
-      '<td>' + fmt2(t.price) + '</td>' +
-      '<td>' + fmtYen(amount) + '</td>' +
-      '<td class="col-name">' + escapeHtml(t.memo) + '</td>' +
+      '<td class="col-name row-header">' + escapeHtml(t.name) + '<div class="ticker-sub">' + escapeHtml(t.ticker) + '</div></td>' +
+      '<td data-label="日付">' + t.date + '</td>' +
+      '<td data-label="区分"><span class="side-badge ' + t.side + '">' + sideLabel + '</span></td>' +
+      '<td data-label="株数">' + t.quantity.toLocaleString('ja-JP') + '株</td>' +
+      '<td data-label="単価">' + fmt2(t.price) + '</td>' +
+      '<td data-label="金額">' + fmtYen(amount) + '</td>' +
+      '<td class="col-name" data-label="メモ">' + escapeHtml(t.memo) + '</td>' +
       '<td class="col-actions actions">' +
         '<details><summary class="btn small">編集</summary>' +
           '<form class="edit-txn-form" data-id="' + t.id + '">' +
