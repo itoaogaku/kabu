@@ -303,6 +303,19 @@ main {
     margin-bottom: 2px;
   }
 
+  /* 銘柄名・直近取引以外は「ラベル: 値」を1行にまとめて余白を詰める */
+  .stock-table td[data-label]:not(.col-name) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .stock-table td[data-label]:not(.col-name)::before {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .stock-table td[data-label]:not(.col-name) .value-block { text-align: right; }
+
   .stock-table td.col-actions {
     padding-top: 10px;
   }

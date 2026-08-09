@@ -101,7 +101,7 @@ function stockRowHtml(s) {
     : '―';
   var refLabelText = s.reference_label === 'avg_buy' ? '平均取得単価比' : (s.reference_label === 'last_sell' ? '前回売却比' : '');
   var changeHtml = s.change_pct !== null
-    ? chgHtml(s.change_pct) + '<div class="hint">' + refLabelText + '</div>'
+    ? '<div class="value-block">' + chgHtml(s.change_pct) + '<div class="hint">' + refLabelText + '</div></div>'
     : '―';
   var alertBadge = s.drop_alert ? '<div class="alert-badge">🔻買い時?</div>' : '';
   var lastTxn = s.last_transaction;
