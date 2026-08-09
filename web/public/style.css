@@ -184,6 +184,7 @@ main {
 .chg.up { color: var(--up); font-weight: 700; }
 .chg.down { color: var(--down); font-weight: 700; }
 .hint { font-size: 0.72rem; color: var(--muted); white-space: normal; text-align: right; }
+.hint.left { text-align: left; }
 
 .alert-badge {
   display: inline-block;

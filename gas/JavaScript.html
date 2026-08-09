@@ -88,7 +88,8 @@ function stockRowHtml(s) {
   var lastTxn = s.last_transaction;
   var lastTxnHtml = lastTxn
     ? '<span class="side-badge ' + lastTxn.side + '">' + (lastTxn.side === 'buy' ? '購入' : '売却') + '</span> ' +
-      lastTxn.date + '&nbsp;' + fmt2(lastTxn.price) + '円'
+      lastTxn.date + '&nbsp;' + fmt2(lastTxn.price) + '円' +
+      (lastTxn.change_pct !== null ? '<div class="hint left">' + chgHtml(lastTxn.change_pct) + ' 直近取引比</div>' : '')
     : '';
 
   return '' +

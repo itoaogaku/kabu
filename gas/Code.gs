@@ -558,6 +558,7 @@ function summarizeGroup_(g, priceData) {
     : null;
 
   var lastTxn = g.txns[0];
+  var lastTxnChangePct = currentPrice !== null ? pct_(lastTxn.price, currentPrice) : null;
 
   return {
     ticker: g.ticker,
@@ -581,7 +582,8 @@ function summarizeGroup_(g, priceData) {
       date: lastTxn.date,
       side: lastTxn.side,
       price: lastTxn.price,
-      quantity: lastTxn.quantity
+      quantity: lastTxn.quantity,
+      change_pct: lastTxnChangePct
     },
     transaction_count: g.txns.length
   };
